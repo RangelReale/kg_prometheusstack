@@ -105,7 +105,6 @@ class PrometheusStackOptions(Options):
           - Grafana Kubernetes data volume
           - Mapping, :class:`KData_Value`, :class:`KData_ConfigMap`, :class:`KData_Secret`
           - ```{'emptyDir': {}}```
-
         * - kubernetes |rarr| resources |rarr| prometheus-statefulset
           - Prometheus Kubernetes StatefulSet resources
           - Mapping
