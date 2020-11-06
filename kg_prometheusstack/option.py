@@ -29,6 +29,26 @@ class PrometheusStackOptions(Options):
           - add prometheus annotations
           - bool
           - ```False```
+        * - config |rarr| prometheus_config
+          - prometheus.yml file
+          - str, :class:`kubragen.configfile.ConfigFile`
+          - :class:`kg_prometheus.PrometheusConfigFile`
+        * - config |rarr| prometheus_service_port
+          - Prometheus service port
+          - int
+          - ```80```
+        * - config |rarr| kubestatemetrics_node_selector
+          - Kube State Metrics Kubernetes node selector
+          - Mapping
+          - ```{'kubernetes.io/os': 'linux'}```
+        * - config |rarr| grafana_install_plugins
+          - Grafana install plugins
+          - Sequence
+          - ```[]```
+        * - config |rarr| grafana_service_port
+          - Grafana service port
+          - int
+          - 80
         * - config |rarr| authorization |rarr| serviceaccount_create
           - whether to create a service account
           - bool
@@ -45,80 +65,61 @@ class PrometheusStackOptions(Options):
           - whether to bind roles to service account
           - bool
           - ```True```
-        * - services |rarr| prometheus |rarr| config |rarr| prometheus_config
-          - prometheus.yml file
-          - str, :class:`kubragen.configfile.ConfigFile`
-          - :class:`kg_prometheus.PrometheusConfigFile`
-        * - services |rarr| prometheus |rarr| config |rarr| service_port
-          - service port
-          - int
-          - ```80```
-        * - services |rarr| prometheus |rarr| container |rarr| init-chown-data
-          - init-chown-data container image
+        * - enable |rarr| kube-state-metrics
+          - whether kube-state-metrics will be deployed
+          - bool
+          - ```True```
+        * - enable |rarr| node-exporter
+          - whether node-exporter will be deployed
+          - bool
+          - ```True```
+        * - enable |rarr| grafana
+          - whether grafana will be deployed
+          - bool
+          - ```True```
+        * - container |rarr| prometheus-init-chown-data
+          - Prometheus init-chown-data container image
           - str
           - ```debian:<version>```
-        * - services |rarr| prometheus |rarr| container |rarr| prometheus
-          - prometheus container image
+        * - container |rarr| prometheus
+          - Prometheus container image
           - str
           - ```prom/prometheus:<version>```
-        * - services |rarr| prometheus |rarr| kubernetes |rarr| volumes |rarr| data
-          - Kubernetes data volume
-          - dict, :class:`KData_Value`, :class:`KData_ConfigMap`, :class:`KData_Secret`
-          -
-        * - services |rarr| prometheus |rarr| kubernetes |rarr| resources |rarr| statefulset
-          - Kubernetes StatefulSet resources
-          - dict
-          -
-        * - services |rarr| kube-state-metrics |rarr| enabled
-          - whether kube-state-metrics is deployed
-          - bool
-          - ```True```
-        * - services |rarr| kube-state-metrics |rarr| config |rarr| node_selector
-          - Kubernetes node selector
-          - Mapping
-          - ```{'kubernetes.io/os': 'linux'}```
-        * - services |rarr| kube-state-metrics |rarr| container |rarr| kube-state-metrics
-          - kube-state-metrics container image
+        * - container |rarr| kube-state-metrics
+          - Kube-state-metrics container image
           - str
           - ```quay.io/coreos/kube-state-metrics:<version>```
-        * - services |rarr| kube-state-metrics |rarr| kubernetes |rarr| resources |rarr| deployment
-          - Kubernetes Deployment resources
-          - Mapping
-          -
-        * - services |rarr| node-exporter |rarr| enabled
-          - whether node-exporter deployed
-          - bool
-          - ```True```
-        * - services |rarr| node-exporter |rarr| container |rarr| node-exporter
-          - node exporter container image
+        * - container |rarr| node-exporter
+          - Node exporter container image
           - str
           - ```prom/node-exporter:<version>```
-        * - services |rarr| node-exporter |rarr| kubernetes |rarr| resources |rarr| daemonset
-          - Kubernetes DaemonSet resources
-          - Mapping
-          -
-        * - services |rarr| grafana |rarr| enabled
-          - whether grafana deployed
-          - bool
-          - ```True```
-        * - services |rarr| grafana |rarr| config |rarr| install_plugins
-          - install plugins
-          - Sequence
-          - ```[]```
-        * - services |rarr| grafana |rarr| config |rarr| service_port
-          - service port
-          - int
-          - 80
-        * - services |rarr| grafana |rarr| container |rarr| grafana
-          - grafana container image
+        * - container |rarr| grafana
+          - Grafana container image
           - str
           - ```grafana/grafana:<version>```
-        * - services |rarr| grafana |rarr| kubernetes |rarr| volumes |rarr| data
-          - Kubernetes data volume
+        * - kubernetes |rarr| volumes |rarr| prometheus-data
+          - Prometheus Kubernetes data volume
+          - dict, :class:`KData_Value`, :class:`KData_ConfigMap`, :class:`KData_Secret`
+          -
+        * - kubernetes |rarr| volumes |rarr| grafana-data
+          - Grafana Kubernetes data volume
           - Mapping, :class:`KData_Value`, :class:`KData_ConfigMap`, :class:`KData_Secret`
           - ```{'emptyDir': {}}```
-        * - services |rarr| grafana |rarr| kubernetes |rarr| resources |rarr| deployment
-          - Kubernetes Deployment resources
+
+        * - kubernetes |rarr| resources |rarr| prometheus-statefulset
+          - Prometheus Kubernetes StatefulSet resources
+          - Mapping
+          -
+        * - kubernetes |rarr| resources |rarr| kube-state-metrics-deployment
+          - Kube-state-metrics Kubernetes Deployment resources
+          - Mapping
+          -
+        * - kubernetes |rarr| resources |rarr| node-exporterdaemonset
+          - Node Exporter Kubernetes DaemonSet resources
+          - Mapping
+          -
+        * - kubernetes |rarr| resources |rarr| grafana-deployment
+          - Grafana Kubernetes Deployment resources
           - Mapping
           -
     """
@@ -133,6 +134,11 @@ class PrometheusStackOptions(Options):
             'namespace': OptionDef(required=True, default_value='monitoring', allowed_types=[str]),
             'config': {
                 'prometheus_annotation': OptionDef(required=True, default_value=False, allowed_types=[bool]),
+                'prometheus_config': OptionDef(required=True, allowed_types=[str, ConfigFile]),
+                'prometheus_service_port': OptionDef(required=True, default_value=80, allowed_types=[int]),
+                'kubestatemetrics_node_selector': OptionDef(default_value=OptionDefaultValue()),
+                'grafana_service_port': OptionDef(required=True, default_value=80, allowed_types=[int]),
+                'grafana_install_plugins': OptionDef(default_value=[], allowed_types=[Sequence]),
                 'authorization': {
                     'serviceaccount_create': OptionDef(required=True, default_value=True, allowed_types=[bool]),
                     'serviceaccount_use': OptionDef(allowed_types=[str]),
@@ -140,70 +146,34 @@ class PrometheusStackOptions(Options):
                     'roles_bind': OptionDef(required=True, default_value=True, allowed_types=[bool]),
                 },
             },
-            'services': {
-                'prometheus': {
-                    'config': {
-                        'prometheus_config': OptionDef(required=True, allowed_types=[str, ConfigFile]),
-                        'service_port': OptionDef(required=True, default_value=80, allowed_types=[int]),
-                    },
-                    'container': {
-                        'init-chown-data': OptionDef(default_value=OptionDefaultValue()),
-                        'prometheus': OptionDef(default_value=OptionDefaultValue()),
-                    },
-                    'kubernetes': {
-                        'volumes': {
-                            'data': OptionDef(required=True, format=OptionDefFormat.KDATA_VOLUME,
-                                              allowed_types=[Mapping, *KDataHelper_Volume.allowed_kdata()]),
-                        },
-                        'resources': {
-                            'statefulset': OptionDef(default_value=OptionDefaultValue()),
-                        }
-                    },
-                },
-                'kube-state-metrics': {
-                    'enabled': OptionDef(required=True, default_value=True, allowed_types=[bool]),
-                    'config': {
-                        'node_selector': OptionDef(default_value=OptionDefaultValue()),
-                    },
-                    'container': {
-                        'kube-state-metrics': OptionDef(default_value=OptionDefaultValue()),
-                    },
-                    'kubernetes': {
-                        'resources': {
-                            'deployment': OptionDef(default_value=OptionDefaultValue()),
-                        }
-                    },
-                },
-                'node-exporter': {
-                    'enabled': OptionDef(required=True, default_value=True, allowed_types=[bool]),
-                    'container': {
-                        'node-exporter': OptionDef(default_value=OptionDefaultValue()),
-                    },
-                    'kubernetes': {
-                        'resources': {
-                            'daemonset': OptionDef(default_value=OptionDefaultValue()),
-                        }
-                    },
-                },
-                'grafana': {
-                    'enabled': OptionDef(required=True, default_value=True, allowed_types=[bool]),
-                    'config': {
-                        'service_port': OptionDef(required=True, default_value=80, allowed_types=[int]),
-                        'install_plugins': OptionDef(default_value=[], allowed_types=[Sequence]),
-                    },
-                    'container': {
-                        'grafana': OptionDef(default_value=OptionDefaultValue()),
-                    },
-                    'kubernetes': {
-                        'volumes': {
-                            'data': OptionDef(required=True, format=OptionDefFormat.KDATA_VOLUME,
+            'enable': {
+                'kube-state-metrics': OptionDef(required=True, default_value=True, allowed_types=[bool]),
+                'node-exporter': OptionDef(required=True, default_value=True, allowed_types=[bool]),
+                'grafana': OptionDef(required=True, default_value=True, allowed_types=[bool]),
+            },
+            'container': {
+                'prometheus-init-chown-data': OptionDef(required=True, default_value='debian:9', allowed_types=[str]),
+                'prometheus': OptionDef(required=True, default_value='prom/prometheus:v2.21.0', allowed_types=[str]),
+                'kube-state-metrics': OptionDef(required=True,
+                                                default_value='quay.io/coreos/kube-state-metrics:v2.0.0-alpha.1',
+                                                allowed_types=[str]),
+                'node-exporter': OptionDef(required=True, default_value='prom/node-exporter:v1.0.1',
+                                           allowed_types=[str]),
+                'grafana': OptionDef(required=True, default_value='grafana/grafana:7.2.0', allowed_types=[str]),
+            },
+            'kubernetes': {
+                'volumes': {
+                    'prometheus-data': OptionDef(required=True, format=OptionDefFormat.KDATA_VOLUME,
+                                                 allowed_types=[Mapping, *KDataHelper_Volume.allowed_kdata()]),
+                    'grafana-data': OptionDef(required=True, format=OptionDefFormat.KDATA_VOLUME,
                                               default_value={'emptyDir': {}},
                                               allowed_types=[Mapping, *KDataHelper_Volume.allowed_kdata()]),
-                        },
-                        'resources': {
-                            'deployment': OptionDef(default_value=OptionDefaultValue()),
-                        }
-                    },
                 },
+                'resources': {
+                    'prometheus-statefulset': OptionDef(allowed_types=[Mapping]),
+                    'kube-state-metrics-deployment': OptionDef(allowed_types=[Mapping]),
+                    'node-exporter-daemonset': OptionDef(allowed_types=[Mapping]),
+                    'grafana-deployment': OptionDef(allowed_types=[Mapping]),
+                }
             },
         }

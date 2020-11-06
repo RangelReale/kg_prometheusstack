@@ -72,27 +72,21 @@ pstack_config = PrometheusStackBuilder(kubragen=kg, options=PrometheusStackOptio
     'basename': 'mypstack',
     'config': {
         'prometheus_annotation': True,
+        'prometheus_config': PrometheusConfigFile(options=PrometheusConfigFileOptions({
+            'scrape': {
+                'prometheus': {
+                    'enabled': True,
+                }
+            },
+        }))
     },
-    'services': {
-        'prometheus': {
-            'config': {
-                'prometheus_config': PrometheusConfigFile(options=PrometheusConfigFileOptions({
-                    'scrape': {
-                        'prometheus': {
-                            'enabled': True,
-                        }
-                    },
-                }))
-            },
-            'kubernetes': {
-                'volumes': {
-                    'data': {
-                        'persistentVolumeClaim': {
-                            'claimName': 'prometheusstack-storage-claim'
-                        }
-                    }
-                },
-            },
+    'kubernetes': {
+        'volumes': {
+            'prometheus-data': {
+                'persistentVolumeClaim': {
+                    'claimName': 'prometheusstack-storage-claim'
+                }
+            }
         },
     },
 }))
