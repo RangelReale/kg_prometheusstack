@@ -1,4 +1,5 @@
-from typing import List, Optional, Sequence, Any
+import copy
+from typing import List, Optional, Sequence, Mapping
 
 from kg_grafana import GrafanaBuilder, GrafanaOptions
 from kg_kubestatemetrics import KubeStateMetricsBuilder, KubeStateMetricsOptions
@@ -6,9 +7,10 @@ from kg_nodeexporter import NodeExporterBuilder, NodeExporterOptions
 from kg_prometheus import PrometheusBuilder, PrometheusOptions
 from kubragen import KubraGen
 from kubragen.builder import Builder
-from kubragen.exception import InvalidParamError, InvalidNameError, OptionError
+from kubragen.exception import InvalidNameError, OptionError
 from kubragen.object import ObjectItem, Object
 from kubragen.types import TBuild, TBuildItem
+
 from .option import PrometheusStackOptions
 
 
@@ -35,8 +37,8 @@ class PrometheusStackBuilder(Builder):
           - description
         * - BUILDITEM_SERVICE_ACCOUNT
           - ServiceAccount
-        * - BUILDITEM_CONFIG
-          - ConfigMap
+        * - BUILDITEM_PROMETHEUS_CONFIG
+          - Prometheus ConfigMap
         * - BUILDITEM_PROMETHEUS_CLUSTER_ROLE
           - Prometheus ClusterRole
         * - BUILDITEM_PROMETHEUS_CLUSTER_ROLE_BINDING
@@ -66,12 +68,12 @@ class PrometheusStackBuilder(Builder):
         * - object name
           - description
           - default value
-        * - config
-          - ConfigMap
-          - ```<basename>-config```
         * - service-account
           - ServiceAccount
           - ```<basename>```
+        * - prometheus-config
+          - Prometheus ConfigMap
+          - ```<basename>-prometheus-config```
         * - prometheus-service
           - Prometheus Service
           - ```<basename>-prometheus```
@@ -108,11 +110,7 @@ class PrometheusStackBuilder(Builder):
     """
     options: PrometheusStackOptions
     _namespace: str
-
-    prometheus_config: PrometheusBuilder
-    granana_config: Optional[GrafanaBuilder]
-    kubestatemetrics_config = Optional[KubeStateMetricsBuilder]
-    nodeexporter_config = Optional[NodeExporterBuilder]
+    _default_object_names: Mapping[str, str]
 
     SOURCE_NAME = 'kg_prometheusstack'
 
@@ -121,7 +119,7 @@ class PrometheusStackBuilder(Builder):
     BUILD_SERVICE: TBuild = 'service'
 
     BUILDITEM_SERVICE_ACCOUNT: TBuildItem = 'service-account'
-    BUILDITEM_CONFIG: TBuildItem = 'config'
+    BUILDITEM_PROMETHEUS_CONFIG: TBuildItem = 'prometheus-config'
     BUILDITEM_PROMETHEUS_CLUSTER_ROLE: TBuildItem = 'prometheus-cluster-role'
     BUILDITEM_PROMETHEUS_CLUSTER_ROLE_BINDING: TBuildItem = 'prometheus-cluster-role-binding'
     BUILDITEM_PROMETHEUS_STATEFULSET: TBuildItem = 'prometheus-statefulset'
@@ -139,6 +137,7 @@ class PrometheusStackBuilder(Builder):
         if options is None:
             options = PrometheusStackOptions()
         self.options = options
+        self._default_object_names = {}
 
         self._namespace = self.option_get('namespace')
 
@@ -149,149 +148,51 @@ class PrometheusStackBuilder(Builder):
             if serviceaccount_name == '':
                 serviceaccount_name = None
 
-        try:
-            self.prometheus_config = PrometheusBuilder(
-                kubragen=kubragen,
-                options=PrometheusOptions({
-                    'basename': self.basename('-prometheus'),
-                    'namespace': self.namespace(),
-                    'config': {
-                        'prometheus_config': self.option_get('config.prometheus_config'),
-                        'service_port': self.option_get('config.prometheus_service_port'),
-                        'authorization': {
-                            'serviceaccount_create': False,
-                            'serviceaccount_use': serviceaccount_name,
-                            'roles_create': self.option_get('config.authorization.roles_create'),
-                            'roles_bind': self.option_get('config.authorization.roles_bind'),
-                        },
-                    },
-                    'container': {
-                        'init-chown-data': self.option_get('container.prometheus-init-chown-data'),
-                        'prometheus': self.option_get('container.prometheus'),
-                    },
-                    'kubernetes': {
-                        'volumes': {
-                            'data': self.option_get('kubernetes.volumes.prometheus-data'),
-                        },
-                        'resources': {
-                            'statefulset': self.option_get('kubernetes.resources.prometheus-statefulset'),
-                        },
-                    },
-                }))
-        except OptionError as e:
-            raise OptionError('Prometheus option error: {}'.format(str(e))) from e
-        except TypeError as e:
-            raise OptionError('Prometheus type error: {}'.format(str(e))) from e
+        self.object_names_update({
+            'service-account': serviceaccount_name,
+        })
 
-        if self.option_get('enable.kube-state-metrics') is not False:
-            try:
-                self.kubestatemetrics_config = KubeStateMetricsBuilder(
-                    kubragen=kubragen, options=KubeStateMetricsOptions({
-                        'basename': self.basename('-kube-state-metrics'),
-                        'namespace': self.namespace(),
-                        'config': {
-                            'prometheus_annotation': self.option_get('config.prometheus_annotation'),
-                            'node_selector': self.option_get('config.kubestatemetrics_node_selector'),
-                            'authorization': {
-                                'serviceaccount_create': False,
-                                'serviceaccount_use': serviceaccount_name,
-                                'roles_create': self.option_get('config.authorization.roles_create'),
-                                'roles_bind': self.option_get('config.authorization.roles_bind'),
-                            },
-                        },
-                        'container': {
-                            'kube-state-metrics': self.option_get('container.kube-state-metrics'),
-                        },
-                        'kubernetes': {
-                            'resources': {
-                                'deployment': self.option_get('kubernetes.resources.kube-state-metrics-deployment'),
-                            },
-                        },
-                    }))
-            except OptionError as e:
-                raise OptionError('Kube state metrics option error: {}'.format(str(e))) from e
-            except TypeError as e:
-                raise OptionError('Kube state metrics type error: {}'.format(str(e))) from e
-        else:
-            self.kubestatemetrics_config = None
-
-        if self.option_get('enable.node-exporter') is not False:
-            try:
-                self.nodeexporter_config = NodeExporterBuilder(
-                    kubragen=kubragen, options=NodeExporterOptions({
-                        'basename': self.basename('-node-exporter'),
-                        'namespace': self.namespace(),
-                        'config': {
-                            'prometheus_annotation': self.option_get('config.prometheus_annotation'),
-                        },
-                        'container': {
-                            'node-exporter': self.option_get('container.node-exporter'),
-                        },
-                        'kubernetes': {
-                            'resources': {
-                                'daemonset': self.option_get('kubernetes.resources.node-exporter-daemonset'),
-                            },
-                        },
-                    }))
-            except OptionError as e:
-                raise OptionError('Node exporter option error: {}'.format(str(e))) from e
-            except TypeError as e:
-                raise OptionError('Node exporter type error: {}'.format(str(e))) from e
-        else:
-            self.nodeexporter_config = None
-
-        if self.option_get('enable.grafana') is not False:
-            try:
-                self.granana_config = GrafanaBuilder(kubragen=kubragen, options=GrafanaOptions({
-                    'basename': self.basename('-grafana'),
-                    'namespace': self.namespace(),
-                    'config': {
-                        'install_plugins': self.option_get('config.grafana_install_plugins'),
-                        'service_port': self.option_get('config.grafana_service_port'),
-                    },
-                    'kubernetes': {
-                        'volumes': {
-                            'data': self.option_get('kubernetes.volumes.grafana-data'),
-                        },
-                        'resources': {
-                            'deployment': self.option_get('kubernetes.resources.grafana-deployment'),
-                        },
-                    },
-                }))
-            except OptionError as e:
-                raise OptionError('Grafana option error: {}'.format(str(e))) from e
-            except TypeError as e:
-                raise OptionError('Grafana type error: {}'.format(str(e))) from e
-        else:
-            self.granana_config = None
+        prometheus_config = self._create_prometheus_config()
+        prometheus_config.ensure_build_names(prometheus_config.BUILD_ACCESSCONTROL, prometheus_config.BUILD_CONFIG,
+                                             prometheus_config.BUILD_SERVICE)
 
         self.object_names_update({
-            'config': self.basename('-config'),
-            'service-account': serviceaccount_name,
-            'prometheus-cluster-role': self.prometheus_config.object_name('cluster-role'),
-            'prometheus-cluster-role-binding': self.prometheus_config.object_name('cluster-role-binding'),
-            'prometheus-statefulset': self.prometheus_config.object_name('statefulset'),
-            'prometheus-service': self.prometheus_config.object_name('service'),
+            'prometheus-config': prometheus_config.object_name('config'),
+            'prometheus-cluster-role': prometheus_config.object_name('cluster-role'),
+            'prometheus-cluster-role-binding': prometheus_config.object_name('cluster-role-binding'),
+            'prometheus-statefulset': prometheus_config.object_name('statefulset'),
+            'prometheus-service': prometheus_config.object_name('service'),
         })
 
         if self.option_get('enable.kube-state-metrics') is not False:
+            kubestatemetrics_config = self._create_kubestatemetrics_config()
+            kubestatemetrics_config.ensure_build_names(kubestatemetrics_config.BUILD_ACCESSCONTROL,
+                                                       kubestatemetrics_config.BUILD_SERVICE)
             self.object_names_update({
-                'kube-state-metrics-cluster-role': self.kubestatemetrics_config.object_name('cluster-role'),
-                'kube-state-metrics-role-binding': self.kubestatemetrics_config.object_name('cluster-role-binding'),
-                'kube-state-metrics-deployment': self.kubestatemetrics_config.object_name('deployment'),
-                'kube-state-metrics-service': self.kubestatemetrics_config.object_name('service'),
+                'kube-state-metrics-cluster-role': kubestatemetrics_config.object_name('cluster-role'),
+                'kube-state-metrics-role-binding': kubestatemetrics_config.object_name('cluster-role-binding'),
+                'kube-state-metrics-deployment': kubestatemetrics_config.object_name('deployment'),
+                'kube-state-metrics-service': kubestatemetrics_config.object_name('service'),
             })
 
         if self.option_get('enable.node-exporter') is not False:
+            nodeexporter_config = self._create_nodeexporter_config()
+            nodeexporter_config.ensure_build_names(nodeexporter_config.BUILD_SERVICE)
+
             self.object_names_update({
-                'node-exporter-daemonset': self.nodeexporter_config.object_name('daemonset'),
+                'node-exporter-daemonset': nodeexporter_config.object_name('daemonset'),
             })
 
         if self.option_get('enable.grafana') is not False:
+            granana_config = self._create_granana_config()
+            granana_config.ensure_build_names(granana_config.BUILD_SERVICE)
+
             self.object_names_update({
-                'grafana-deployment': self.granana_config.object_name('deployment'),
-                'grafana-service': self.granana_config.object_name('service'),
+                'grafana-deployment': granana_config.object_name('deployment'),
+                'grafana-service': granana_config.object_name('service'),
             })
+
+        self._default_object_names = copy.deepcopy(self.object_names())
 
     def option_get(self, name: str):
         return self.kubragen.option_root_get(self.options, name)
@@ -355,11 +256,11 @@ class PrometheusStackBuilder(Builder):
             ])
 
         ret.extend(self._build_result_change(
-            self.prometheus_config.build(self.prometheus_config.BUILD_ACCESSCONTROL), 'prometheus'))
+            self._create_prometheus_config().build(PrometheusBuilder.BUILD_ACCESSCONTROL), 'prometheus'))
 
         if self.option_get('enable.kube-state-metrics') is not False:
             ret.extend(self._build_result_change(
-                self.kubestatemetrics_config.build(self.kubestatemetrics_config.BUILD_ACCESSCONTROL), 'kube-state-metrics'))
+                self._create_kubestatemetrics_config().build(KubeStateMetricsBuilder.BUILD_ACCESSCONTROL), 'kube-state-metrics'))
 
         return ret
 
@@ -367,7 +268,7 @@ class PrometheusStackBuilder(Builder):
         ret = []
 
         ret.extend(self._build_result_change(
-            self.prometheus_config.build(self.prometheus_config.BUILD_CONFIG), 'prometheus'))
+            self._create_prometheus_config().build(PrometheusBuilder.BUILD_CONFIG), 'prometheus'))
 
         return ret
 
@@ -375,16 +276,16 @@ class PrometheusStackBuilder(Builder):
         ret = []
 
         ret.extend(self._build_result_change(
-            self.prometheus_config.build(self.prometheus_config.BUILD_SERVICE), 'prometheus'))
+            self._create_prometheus_config().build(PrometheusBuilder.BUILD_SERVICE), 'prometheus'))
         if self.option_get('enable.kube-state-metrics') is not False:
             ret.extend(self._build_result_change(
-                self.kubestatemetrics_config.build(self.kubestatemetrics_config.BUILD_SERVICE), 'kube-state-metrics'))
+                self._create_kubestatemetrics_config().build(KubeStateMetricsBuilder.BUILD_SERVICE), 'kube-state-metrics'))
         if self.option_get('enable.node-exporter') is not False:
             ret.extend(self._build_result_change(
-                self.nodeexporter_config.build(self.nodeexporter_config.BUILD_SERVICE), 'node-exporter'))
+                self._create_nodeexporter_config().build(NodeExporterBuilder.BUILD_SERVICE), 'node-exporter'))
         if self.option_get('enable.grafana') is not False:
             ret.extend(self._build_result_change(
-                self.granana_config.build(self.granana_config.BUILD_SERVICE), 'grafana'))
+                self._create_granana_config().build(GrafanaBuilder.BUILD_SERVICE), 'grafana'))
 
         return ret
 
@@ -395,3 +296,135 @@ class PrometheusStackBuilder(Builder):
                 o.source = self.SOURCE_NAME
                 o.instance = self.basename()
         return items
+
+    def _object_names_changed(self, prefix: str) -> Mapping[str, str]:
+        ret = {}
+        for dname, dvalue in self.object_names().items():
+            if dname.startswith(prefix) and dname in self._default_object_names:
+                if self._default_object_names[dname] != dvalue:
+                    ret[dname[len(prefix):]] = dvalue
+        return ret
+
+    def _create_prometheus_config(self) -> PrometheusBuilder:
+        try:
+            ret = PrometheusBuilder(kubragen=self.kubragen, options=PrometheusOptions({
+                    'basename': self.basename('-prometheus'),
+                    'namespace': self.namespace(),
+                    'config': {
+                        'prometheus_config': self.option_get('config.prometheus_config'),
+                        'service_port': self.option_get('config.prometheus_service_port'),
+                        'authorization': {
+                            'serviceaccount_create': False,
+                            'serviceaccount_use': self.object_name('service-account'),
+                            'roles_create': self.option_get('config.authorization.roles_create'),
+                            'roles_bind': self.option_get('config.authorization.roles_bind'),
+                        },
+                    },
+                    'container': {
+                        'init-chown-data': self.option_get('container.prometheus-init-chown-data'),
+                        'prometheus': self.option_get('container.prometheus'),
+                    },
+                    'kubernetes': {
+                        'volumes': {
+                            'data': self.option_get('kubernetes.volumes.prometheus-data'),
+                        },
+                        'resources': {
+                            'statefulset': self.option_get('kubernetes.resources.prometheus-statefulset'),
+                        },
+                    },
+                }))
+            ret.object_names_change(self._object_names_changed('prometheus-'))
+            return ret
+        except OptionError as e:
+            raise OptionError('Prometheus option error: {}'.format(str(e))) from e
+        except TypeError as e:
+            raise OptionError('Prometheus type error: {}'.format(str(e))) from e
+
+    def _create_kubestatemetrics_config(self) -> Optional[KubeStateMetricsBuilder]:
+        if self.option_get('enable.kube-state-metrics') is not False:
+            try:
+                ret = KubeStateMetricsBuilder(kubragen=self.kubragen, options=KubeStateMetricsOptions({
+                        'basename': self.basename('-kube-state-metrics'),
+                        'namespace': self.namespace(),
+                        'config': {
+                            'prometheus_annotation': self.option_get('config.prometheus_annotation'),
+                            'node_selector': self.option_get('config.kubestatemetrics_node_selector'),
+                            'authorization': {
+                                'serviceaccount_create': False,
+                                'serviceaccount_use': self.object_name('service-account'),
+                                'roles_create': self.option_get('config.authorization.roles_create'),
+                                'roles_bind': self.option_get('config.authorization.roles_bind'),
+                            },
+                        },
+                        'container': {
+                            'kube-state-metrics': self.option_get('container.kube-state-metrics'),
+                        },
+                        'kubernetes': {
+                            'resources': {
+                                'deployment': self.option_get('kubernetes.resources.kube-state-metrics-deployment'),
+                            },
+                        },
+                    }))
+                ret.object_names_change(self._object_names_changed('kube-state-metrics-'))
+                return ret
+            except OptionError as e:
+                raise OptionError('Kube state metrics option error: {}'.format(str(e))) from e
+            except TypeError as e:
+                raise OptionError('Kube state metrics type error: {}'.format(str(e))) from e
+        else:
+            return None
+
+    def _create_nodeexporter_config(self) -> Optional[NodeExporterBuilder]:
+        if self.option_get('enable.node-exporter') is not False:
+            try:
+                ret = NodeExporterBuilder(kubragen=self.kubragen, options=NodeExporterOptions({
+                        'basename': self.basename('-node-exporter'),
+                        'namespace': self.namespace(),
+                        'config': {
+                            'prometheus_annotation': self.option_get('config.prometheus_annotation'),
+                        },
+                        'container': {
+                            'node-exporter': self.option_get('container.node-exporter'),
+                        },
+                        'kubernetes': {
+                            'resources': {
+                                'daemonset': self.option_get('kubernetes.resources.node-exporter-daemonset'),
+                            },
+                        },
+                    }))
+                ret.object_names_change(self._object_names_changed('kube-state-metrics-'))
+                return ret
+            except OptionError as e:
+                raise OptionError('Node exporter option error: {}'.format(str(e))) from e
+            except TypeError as e:
+                raise OptionError('Node exporter type error: {}'.format(str(e))) from e
+        else:
+            return None
+
+    def _create_granana_config(self) -> Optional[GrafanaBuilder]:
+        if self.option_get('enable.grafana') is not False:
+            try:
+                ret = GrafanaBuilder(kubragen=self.kubragen, options=GrafanaOptions({
+                    'basename': self.basename('-grafana'),
+                    'namespace': self.namespace(),
+                    'config': {
+                        'install_plugins': self.option_get('config.grafana_install_plugins'),
+                        'service_port': self.option_get('config.grafana_service_port'),
+                    },
+                    'kubernetes': {
+                        'volumes': {
+                            'data': self.option_get('kubernetes.volumes.grafana-data'),
+                        },
+                        'resources': {
+                            'deployment': self.option_get('kubernetes.resources.grafana-deployment'),
+                        },
+                    },
+                }))
+                ret.object_names_change(self._object_names_changed('grafana-'))
+                return ret
+            except OptionError as e:
+                raise OptionError('Grafana option error: {}'.format(str(e))) from e
+            except TypeError as e:
+                raise OptionError('Grafana type error: {}'.format(str(e))) from e
+        else:
+            return None
