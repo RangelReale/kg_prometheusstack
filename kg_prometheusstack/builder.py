@@ -148,7 +148,7 @@ class PrometheusStackBuilder(Builder):
             if serviceaccount_name == '':
                 serviceaccount_name = None
 
-        self.object_names_update({
+        self.object_names_init({
             'service-account': serviceaccount_name,
         })
 
@@ -156,7 +156,7 @@ class PrometheusStackBuilder(Builder):
         prometheus_config.ensure_build_names(prometheus_config.BUILD_ACCESSCONTROL, prometheus_config.BUILD_CONFIG,
                                              prometheus_config.BUILD_SERVICE)
 
-        self.object_names_update({
+        self.object_names_init({
             'prometheus-config': prometheus_config.object_name('config'),
             'prometheus-cluster-role': prometheus_config.object_name('cluster-role'),
             'prometheus-cluster-role-binding': prometheus_config.object_name('cluster-role-binding'),
@@ -168,7 +168,7 @@ class PrometheusStackBuilder(Builder):
             kubestatemetrics_config = self._create_kubestatemetrics_config()
             kubestatemetrics_config.ensure_build_names(kubestatemetrics_config.BUILD_ACCESSCONTROL,
                                                        kubestatemetrics_config.BUILD_SERVICE)
-            self.object_names_update({
+            self.object_names_init({
                 'kube-state-metrics-cluster-role': kubestatemetrics_config.object_name('cluster-role'),
                 'kube-state-metrics-role-binding': kubestatemetrics_config.object_name('cluster-role-binding'),
                 'kube-state-metrics-deployment': kubestatemetrics_config.object_name('deployment'),
@@ -179,7 +179,7 @@ class PrometheusStackBuilder(Builder):
             nodeexporter_config = self._create_nodeexporter_config()
             nodeexporter_config.ensure_build_names(nodeexporter_config.BUILD_SERVICE)
 
-            self.object_names_update({
+            self.object_names_init({
                 'node-exporter-daemonset': nodeexporter_config.object_name('daemonset'),
             })
 
@@ -187,7 +187,7 @@ class PrometheusStackBuilder(Builder):
             granana_config = self._create_granana_config()
             granana_config.ensure_build_names(granana_config.BUILD_SERVICE)
 
-            self.object_names_update({
+            self.object_names_init({
                 'grafana-deployment': granana_config.object_name('deployment'),
                 'grafana-service': granana_config.object_name('service'),
             })
