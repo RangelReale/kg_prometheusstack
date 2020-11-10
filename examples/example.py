@@ -57,7 +57,15 @@ pstack_config = PrometheusStackBuilder(kubragen=kg, options=PrometheusStackOptio
                     'enabled': True,
                 }
             },
-        }))
+        })),
+        'grafana_provisioning': {
+            'datasources': [{
+                'name': 'Prometheus',
+                'type': 'prometheus',
+                'access': 'proxy',
+                'url': 'http://{}:{}'.format('prometheus', 80),
+            }]
+        },
     },
     'kubernetes': {
         'volumes': {
@@ -68,7 +76,9 @@ pstack_config = PrometheusStackBuilder(kubragen=kg, options=PrometheusStackOptio
             }
         },
     },
-}))
+})).object_names_change({
+    'prometheus-service': 'prometheus',
+})
 
 pstack_config.ensure_build_names(pstack_config.BUILD_ACCESSCONTROL, pstack_config.BUILD_CONFIG,
                                  pstack_config.BUILD_SERVICE)

@@ -57,6 +57,8 @@ class PrometheusStackBuilder(Builder):
           - Kube State Metrics Service
         * - BUILDITEM_GRAFANA_DEPLOYMENT
           - Grafana Deployment
+        * - BUILDITEM_GRAFANA_CONFIG_SECRET
+          - Grafana Secret
         * - BUILDITEM_GRAFANA_SERVICE
           - Grafana Service
         * - BUILDITEM_NODEEXPORTER_DAEMONSET
@@ -101,6 +103,9 @@ class PrometheusStackBuilder(Builder):
         * - node-exporter-daemonset
           - Node Exporter DaemonSet
           - ```<basename>-node-exporter```
+        * - grafana-config-secret
+          - Grafana Secret
+          - ```<basename>-grafana-config-secret```
         * - grafana-service
           - Grafana Service
           - ```<basename>-grafana```
@@ -128,6 +133,7 @@ class PrometheusStackBuilder(Builder):
     BUILDITEM_KUBESTATEMETRICS_CLUSTER_ROLE_BINDING: TBuildItem = 'kubestatemetrics-cluster-role-binding'
     BUILDITEM_KUBESTATEMETRICS_DEPLOYMENT: TBuildItem = 'kube-state-metrics-deployment'
     BUILDITEM_KUBESTATEMETRICS_SERVICE: TBuildItem = 'kube-state-metrics-service'
+    BUILDITEM_GRAFANA_CONFIG_SECRET: TBuildItem = 'grafana-config-secret'
     BUILDITEM_GRAFANA_DEPLOYMENT: TBuildItem = 'grafana-deployment'
     BUILDITEM_GRAFANA_SERVICE: TBuildItem = 'grafana-service'
     BUILDITEM_NODEEXPORTER_DAEMONSET: TBuildItem = 'node-exporter-daemonset'
@@ -185,9 +191,10 @@ class PrometheusStackBuilder(Builder):
 
         if self.option_get('enable.grafana') is not False:
             granana_config = self._create_granana_config()
-            granana_config.ensure_build_names(granana_config.BUILD_SERVICE)
+            granana_config.ensure_build_names(granana_config.BUILD_CONFIG, granana_config.BUILD_SERVICE)
 
             self.object_names_init({
+                'grafana-config-secret': granana_config.object_name('config-secret'),
                 'grafana-deployment': granana_config.object_name('deployment'),
                 'grafana-service': granana_config.object_name('service'),
             })
@@ -216,7 +223,6 @@ class PrometheusStackBuilder(Builder):
     def builditem_names(self) -> List[TBuildItem]:
         return [
             self.BUILDITEM_SERVICE_ACCOUNT,
-            self.BUILDITEM_CONFIG,
             self.BUILDITEM_PROMETHEUS_CLUSTER_ROLE,
             self.BUILDITEM_PROMETHEUS_CLUSTER_ROLE_BINDING,
             self.BUILDITEM_PROMETHEUS_STATEFULSET,
@@ -225,6 +231,7 @@ class PrometheusStackBuilder(Builder):
             self.BUILDITEM_KUBESTATEMETRICS_CLUSTER_ROLE_BINDING,
             self.BUILDITEM_KUBESTATEMETRICS_DEPLOYMENT,
             self.BUILDITEM_KUBESTATEMETRICS_SERVICE,
+            self.BUILDITEM_GRAFANA_CONFIG_SECRET,
             self.BUILDITEM_GRAFANA_DEPLOYMENT,
             self.BUILDITEM_GRAFANA_SERVICE,
             self.BUILDITEM_NODEEXPORTER_DAEMONSET,
@@ -269,6 +276,9 @@ class PrometheusStackBuilder(Builder):
 
         ret.extend(self._build_result_change(
             self._create_prometheus_config().build(PrometheusBuilder.BUILD_CONFIG), 'prometheus'))
+        if self.option_get('enable.grafana') is not False:
+            ret.extend(self._build_result_change(
+                self._create_granana_config().build(GrafanaBuilder.BUILD_CONFIG), 'grafana'))
 
         return ret
 
