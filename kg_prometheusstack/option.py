@@ -49,6 +49,18 @@ class PrometheusStackOptions(Options):
           - Grafana service port
           - int
           - 80
+        * - config |rarr| grafana_provisioning |rarr| datasources
+          - Grafana datasource provisioning
+          - str, Sequence, ConfigFile
+          -
+        * - config |rarr| grafana_provisioning |rarr| plugins
+          - Grafana plugins provisioning
+          - str, Sequence, ConfigFile
+          -
+        * - config |rarr| grafana_provisioning |rarr| dashboards
+          - Grafana dashboards provisioning
+          - str, Sequence, ConfigFile
+          -
         * - config |rarr| authorization |rarr| serviceaccount_create
           - whether to create a service account
           - bool
@@ -138,6 +150,11 @@ class PrometheusStackOptions(Options):
                 'kubestatemetrics_node_selector': OptionDef(default_value=OptionDefaultValue()),
                 'grafana_service_port': OptionDef(required=True, default_value=80, allowed_types=[int]),
                 'grafana_install_plugins': OptionDef(default_value=[], allowed_types=[Sequence]),
+                'grafana_provisioning': {
+                    'datasources': OptionDef(allowed_types=[str, Sequence, ConfigFile]),
+                    'plugins': OptionDef(allowed_types=[str, Sequence, ConfigFile]),
+                    'dashboards': OptionDef(allowed_types=[str, Sequence, ConfigFile]),
+                },
                 'authorization': {
                     'serviceaccount_create': OptionDef(required=True, default_value=True, allowed_types=[bool]),
                     'serviceaccount_use': OptionDef(allowed_types=[str]),

@@ -181,4 +181,4 @@ kubectl apply -f 003-prometheusstack.yaml
 
 ## Author
 
-Rangel Reale (rangelspam@gmail.com)
+Rangel Reale (rangelreale@gmail.com)

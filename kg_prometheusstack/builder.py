@@ -410,6 +410,11 @@ class PrometheusStackBuilder(Builder):
                     'config': {
                         'install_plugins': self.option_get('config.grafana_install_plugins'),
                         'service_port': self.option_get('config.grafana_service_port'),
+                        'provisioning': {
+                            'datasources': self.option_get('config.grafana_provisioning.datasources'),
+                            'plugins': self.option_get('config.grafana_provisioning.plugins'),
+                            'dashboards': self.option_get('config.grafana_provisioning.dashboards'),
+                        },
                     },
                     'kubernetes': {
                         'volumes': {
