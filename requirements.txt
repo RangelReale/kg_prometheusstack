@@ -1,5 +1,5 @@
-kubragen>=0.7.17
-kg-prometheus>=0.7.5
+kubragen>=0.7.23
+kg-prometheus>=0.7.7
 kg-nodeexporter>=0.7.4
 kg-kubestatemetrics>=0.7.4
-kg-grafana>=0.7.7
+kg-grafana>=0.7.8
