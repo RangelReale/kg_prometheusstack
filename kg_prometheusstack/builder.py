@@ -424,13 +424,24 @@ class PrometheusStackBuilder(Builder):
                 'basename': self.basename('-grafana'),
                 'namespace': self.namespace(),
                 'config': {
+                    'grafana_config': self.option_get('config.grafana_config'),
                     'install_plugins': self.option_get('config.grafana_install_plugins'),
                     'service_port': self.option_get('config.grafana_service_port'),
+                    'probes': self.option_get('config.probes'),
                     'provisioning': {
                         'datasources': self.option_get('config.grafana_provisioning.datasources'),
                         'plugins': self.option_get('config.grafana_provisioning.plugins'),
                         'dashboards': self.option_get('config.grafana_provisioning.dashboards'),
                     },
+                    'dashboards': self.option_get('config.grafana_dashboards'),
+                    'dashboards_path': self.option_get('config.grafana_dashboards_path'),
+                    'admin': {
+                        'user': self.option_get('config.grafana_admin.user'),
+                        'password': self.option_get('config.grafana_admin.password'),
+                    },
+                },
+                'container': {
+                    'grafana': self.option_get('container.grafana'),
                 },
                 'kubernetes': {
                     'volumes': {

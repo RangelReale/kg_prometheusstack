@@ -1,7 +1,8 @@
 from typing import Mapping, Sequence
 
 from kubragen.configfile import ConfigFile
-from kubragen.kdatahelper import KDataHelper_Volume
+from kubragen.kdata import KData_Secret
+from kubragen.kdatahelper import KDataHelper_Volume, KDataHelper_Env
 from kubragen.option import OptionDef, OptionDefFormat, OptionDefaultValue
 from kubragen.options import Options
 
@@ -41,6 +42,10 @@ class PrometheusStackOptions(Options):
           - Kube State Metrics Kubernetes node selector
           - Mapping
           - ```{'kubernetes.io/os': 'linux'}```
+        * - config |rarr| grafana_config
+          - Grafana INI config file
+          - str, :class:`kubragen.configfile.ConfigFile`
+          - :class:`kg_grafana.GrafanaConfigFile`
         * - config |rarr| grafana_install_plugins
           - Grafana install plugins
           - Sequence
@@ -58,8 +63,24 @@ class PrometheusStackOptions(Options):
           - str, Sequence, ConfigFile
           -
         * - config |rarr| grafana_provisioning |rarr| dashboards
-          - Grafana dashboards provisioning
+          - Grafana dashboards provisioning. ```options.path``` will be set automatically if it is not set
           - str, Sequence, ConfigFile
+          -
+        * - config |rarr| grafana_dashboards
+          - Grafana dashboards to pre install
+          - :class:`Sequence[GrafanaDashboardSource]`
+          -
+        * - config |rarr| grafana_dashboards_path
+          - The root path where Grafana dashboards will be installed on the container.
+          - ```/var/lib/grafana/dashboards```
+          -
+        * - config |rarr| grafana_admin |rarr| user
+          - Grafana admin user name
+          - str, :class:`KData_Value`, :class:`KData_ConfigMap`, :class:`KData_Secret`
+          -
+        * - config |rarr| grafana_admin |rarr| password
+          - Grafana admin password
+          - str, :class:`KData_Secret`
           -
         * - config |rarr| authorization |rarr| serviceaccount_create
           - whether to create a service account
@@ -145,15 +166,23 @@ class PrometheusStackOptions(Options):
             'namespace': OptionDef(required=True, default_value='monitoring', allowed_types=[str]),
             'config': {
                 'prometheus_annotation': OptionDef(required=True, default_value=False, allowed_types=[bool]),
+                'probes': OptionDef(required=True, default_value=False, allowed_types=[bool]),
                 'prometheus_config': OptionDef(required=True, allowed_types=[str, ConfigFile]),
                 'prometheus_service_port': OptionDef(required=True, default_value=80, allowed_types=[int]),
                 'kubestatemetrics_node_selector': OptionDef(default_value=OptionDefaultValue()),
-                'grafana_service_port': OptionDef(required=True, default_value=80, allowed_types=[int]),
+                'grafana_config': OptionDef(allowed_types=[str, ConfigFile]),
                 'grafana_install_plugins': OptionDef(default_value=[], allowed_types=[Sequence]),
+                'grafana_service_port': OptionDef(required=True, default_value=80, allowed_types=[int]),
                 'grafana_provisioning': {
                     'datasources': OptionDef(allowed_types=[str, Sequence, ConfigFile]),
                     'plugins': OptionDef(allowed_types=[str, Sequence, ConfigFile]),
                     'dashboards': OptionDef(allowed_types=[str, Sequence, ConfigFile]),
+                },
+                'grafana_dashboards': OptionDef(allowed_types=[Sequence]),
+                'grafana_dashboards_path': OptionDef(required=True, default_value='/var/lib/grafana/dashboards', allowed_types=[str]),
+                'grafana_admin': {
+                    'user': OptionDef(format=OptionDefFormat.KDATA_ENV, allowed_types=[str, *KDataHelper_Env.allowed_kdata()]),
+                    'password': OptionDef(format=OptionDefFormat.KDATA_ENV, allowed_types=[str, KData_Secret]),
                 },
                 'authorization': {
                     'serviceaccount_create': OptionDef(required=True, default_value=True, allowed_types=[bool]),
