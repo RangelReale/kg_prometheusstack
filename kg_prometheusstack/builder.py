@@ -325,8 +325,8 @@ class PrometheusStackBuilder(Builder):
                     'basename': self.basename('-prometheus'),
                     'namespace': self.namespace(),
                     'config': {
-                        'prometheus_config': self.option_get('config.prometheus_config'),
-                        'service_port': self.option_get('config.prometheus_service_port'),
+                        'prometheus_config': self.option_get('config.prometheus.prometheus_config'),
+                        'service_port': self.option_get('config.prometheus.service_port'),
                         'authorization': {
                             'serviceaccount_create': False,
                             'serviceaccount_use': self.object_name('service-account'),
@@ -364,7 +364,7 @@ class PrometheusStackBuilder(Builder):
                     'namespace': self.namespace(),
                     'config': {
                         'prometheus_annotation': self.option_get('config.prometheus_annotation'),
-                        'node_selector': self.option_get('config.kubestatemetrics_node_selector'),
+                        'node_selector': self.option_get('config.kubestatemetrics.node_selector'),
                         'authorization': {
                             'serviceaccount_create': False,
                             'serviceaccount_use': self.object_name('service-account'),
@@ -424,20 +424,20 @@ class PrometheusStackBuilder(Builder):
                 'basename': self.basename('-grafana'),
                 'namespace': self.namespace(),
                 'config': {
-                    'grafana_config': self.option_get('config.grafana_config'),
-                    'install_plugins': self.option_get('config.grafana_install_plugins'),
-                    'service_port': self.option_get('config.grafana_service_port'),
+                    'grafana_config': self.option_get('config.grafana.grafana_config'),
+                    'install_plugins': self.option_get('config.grafana.install_plugins'),
+                    'service_port': self.option_get('config.grafana.service_port'),
                     'probes': self.option_get('config.probes'),
                     'provisioning': {
-                        'datasources': self.option_get('config.grafana_provisioning.datasources'),
-                        'plugins': self.option_get('config.grafana_provisioning.plugins'),
-                        'dashboards': self.option_get('config.grafana_provisioning.dashboards'),
+                        'datasources': self.option_get('config.grafana.provisioning.datasources'),
+                        'plugins': self.option_get('config.grafana.provisioning.plugins'),
+                        'dashboards': self.option_get('config.grafana.provisioning.dashboards'),
                     },
-                    'dashboards': self.option_get('config.grafana_dashboards'),
-                    'dashboards_path': self.option_get('config.grafana_dashboards_path'),
+                    'dashboards': self.option_get('config.grafana.dashboards'),
+                    'dashboards_path': self.option_get('config.grafana.dashboards_path'),
                     'admin': {
-                        'user': self.option_get('config.grafana_admin.user'),
-                        'password': self.option_get('config.grafana_admin.password'),
+                        'user': self.option_get('config.grafana.admin.user'),
+                        'password': self.option_get('config.grafana.admin.password'),
                     },
                 },
                 'container': {

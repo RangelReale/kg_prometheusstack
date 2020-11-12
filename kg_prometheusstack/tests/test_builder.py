@@ -14,7 +14,9 @@ class TestBuilder(unittest.TestCase):
     def test_empty(self):
         prometheusstack_config = PrometheusStackBuilder(kubragen=self.kg, options=PrometheusStackOptions({
             'config': {
-                'prometheus_config': '',
+                'prometheus': {
+                    'prometheus_config': '',
+                },
             },
             'kubernetes': {
                 'volumes': {
@@ -32,7 +34,9 @@ class TestBuilder(unittest.TestCase):
             'namespace': 'myns',
             'basename': 'myprometheusstack',
             'config': {
-                'prometheus_config': '',
+                'prometheus': {
+                    'prometheus_config': '',
+                },
             },
             'kubernetes': {
                 'volumes': {

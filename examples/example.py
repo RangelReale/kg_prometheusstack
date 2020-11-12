@@ -51,21 +51,25 @@ pstack_config = PrometheusStackBuilder(kubragen=kg, options=PrometheusStackOptio
     'basename': 'mypstack',
     'config': {
         'prometheus_annotation': True,
-        'prometheus_config': PrometheusConfigFile(options=PrometheusConfigFileOptions({
-            'scrape': {
-                'prometheus': {
-                    'enabled': True,
-                }
-            },
-        })),
-        'grafana_provisioning': {
-            'datasources': [{
-                'name': 'Prometheus',
-                'type': 'prometheus',
-                'access': 'proxy',
-                'url': 'http://{}:{}'.format('prometheus', 80),
-            }]
+        'prometheus': {
+            'prometheus_config': PrometheusConfigFile(options=PrometheusConfigFileOptions({
+                'scrape': {
+                    'prometheus': {
+                        'enabled': True,
+                    }
+                },
+            })),
         },
+        'grafana': {
+            'provisioning': {
+                'datasources': [{
+                    'name': 'Prometheus',
+                    'type': 'prometheus',
+                    'access': 'proxy',
+                    'url': 'http://{}:{}'.format('prometheus', 80),
+                }]
+            },
+        }
     },
     'kubernetes': {
         'volumes': {

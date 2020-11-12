@@ -30,55 +30,55 @@ class PrometheusStackOptions(Options):
           - add prometheus annotations
           - bool
           - ```False```
-        * - config |rarr| prometheus_config
+        * - config |rarr| prometheus |rarr| prometheus_config
           - prometheus.yml file
           - str, :class:`kubragen.configfile.ConfigFile`
           - :class:`kg_prometheus.PrometheusConfigFile`
-        * - config |rarr| prometheus_service_port
+        * - config |rarr| prometheus |rarr| service_port
           - Prometheus service port
           - int
           - ```80```
-        * - config |rarr| kubestatemetrics_node_selector
+        * - config |rarr| kubestatemetrics |rarr| node_selector
           - Kube State Metrics Kubernetes node selector
           - Mapping
           - ```{'kubernetes.io/os': 'linux'}```
-        * - config |rarr| grafana_config
+        * - config |rarr| grafana |rarr| grafana_config
           - Grafana INI config file
           - str, :class:`kubragen.configfile.ConfigFile`
           - :class:`kg_grafana.GrafanaConfigFile`
-        * - config |rarr| grafana_install_plugins
+        * - config |rarr| grafana |rarr| install_plugins
           - Grafana install plugins
           - Sequence
           - ```[]```
-        * - config |rarr| grafana_service_port
+        * - config |rarr| grafana |rarr| service_port
           - Grafana service port
           - int
           - 80
-        * - config |rarr| grafana_provisioning |rarr| datasources
+        * - config |rarr| grafana |rarr| provisioning |rarr| datasources
           - Grafana datasource provisioning
           - str, Sequence, ConfigFile
           -
-        * - config |rarr| grafana_provisioning |rarr| plugins
+        * - config |rarr| grafana |rarr| provisioning |rarr| plugins
           - Grafana plugins provisioning
           - str, Sequence, ConfigFile
           -
-        * - config |rarr| grafana_provisioning |rarr| dashboards
+        * - config |rarr| grafana |rarr| provisioning |rarr| dashboards
           - Grafana dashboards provisioning. ```options.path``` will be set automatically if it is not set
           - str, Sequence, ConfigFile
           -
-        * - config |rarr| grafana_dashboards
+        * - config |rarr| grafana |rarr| dashboards
           - Grafana dashboards to pre install
           - :class:`Sequence[GrafanaDashboardSource]`
           -
-        * - config |rarr| grafana_dashboards_path
+        * - config |rarr| grafana |rarr| dashboards_path
           - The root path where Grafana dashboards will be installed on the container.
           - ```/var/lib/grafana/dashboards```
           -
-        * - config |rarr| grafana_admin |rarr| user
+        * - config |rarr| grafana |rarr| admin |rarr| user
           - Grafana admin user name
           - str, :class:`KData_Value`, :class:`KData_ConfigMap`, :class:`KData_Secret`
           -
-        * - config |rarr| grafana_admin |rarr| password
+        * - config |rarr| grafana |rarr| admin |rarr| password
           - Grafana admin password
           - str, :class:`KData_Secret`
           -
@@ -167,22 +167,28 @@ class PrometheusStackOptions(Options):
             'config': {
                 'prometheus_annotation': OptionDef(required=True, default_value=False, allowed_types=[bool]),
                 'probes': OptionDef(required=True, default_value=False, allowed_types=[bool]),
-                'prometheus_config': OptionDef(required=True, allowed_types=[str, ConfigFile]),
-                'prometheus_service_port': OptionDef(required=True, default_value=80, allowed_types=[int]),
-                'kubestatemetrics_node_selector': OptionDef(default_value=OptionDefaultValue()),
-                'grafana_config': OptionDef(allowed_types=[str, ConfigFile]),
-                'grafana_install_plugins': OptionDef(default_value=[], allowed_types=[Sequence]),
-                'grafana_service_port': OptionDef(required=True, default_value=80, allowed_types=[int]),
-                'grafana_provisioning': {
-                    'datasources': OptionDef(allowed_types=[str, Sequence, ConfigFile]),
-                    'plugins': OptionDef(allowed_types=[str, Sequence, ConfigFile]),
-                    'dashboards': OptionDef(allowed_types=[str, Sequence, ConfigFile]),
+                'prometheus': {
+                    'prometheus_config': OptionDef(required=True, allowed_types=[str, ConfigFile]),
+                    'service_port': OptionDef(required=True, default_value=80, allowed_types=[int]),
                 },
-                'grafana_dashboards': OptionDef(allowed_types=[Sequence]),
-                'grafana_dashboards_path': OptionDef(required=True, default_value='/var/lib/grafana/dashboards', allowed_types=[str]),
-                'grafana_admin': {
-                    'user': OptionDef(format=OptionDefFormat.KDATA_ENV, allowed_types=[str, *KDataHelper_Env.allowed_kdata()]),
-                    'password': OptionDef(format=OptionDefFormat.KDATA_ENV, allowed_types=[str, KData_Secret]),
+                'kubestatemetrics': {
+                    'node_selector': OptionDef(default_value=OptionDefaultValue()),
+                },
+                'grafana': {
+                    'grafana_config': OptionDef(allowed_types=[str, ConfigFile]),
+                    'install_plugins': OptionDef(default_value=[], allowed_types=[Sequence]),
+                    'service_port': OptionDef(required=True, default_value=80, allowed_types=[int]),
+                    'provisioning': {
+                        'datasources': OptionDef(allowed_types=[str, Sequence, ConfigFile]),
+                        'plugins': OptionDef(allowed_types=[str, Sequence, ConfigFile]),
+                        'dashboards': OptionDef(allowed_types=[str, Sequence, ConfigFile]),
+                    },
+                    'dashboards': OptionDef(allowed_types=[Sequence]),
+                    'dashboards_path': OptionDef(required=True, default_value='/var/lib/grafana/dashboards', allowed_types=[str]),
+                    'admin': {
+                        'user': OptionDef(format=OptionDefFormat.KDATA_ENV, allowed_types=[str, *KDataHelper_Env.allowed_kdata()]),
+                        'password': OptionDef(format=OptionDefFormat.KDATA_ENV, allowed_types=[str, KData_Secret]),
+                    },
                 },
                 'authorization': {
                     'serviceaccount_create': OptionDef(required=True, default_value=True, allowed_types=[bool]),
