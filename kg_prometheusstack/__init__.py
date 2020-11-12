@@ -5,7 +5,7 @@ from .option import (
     PrometheusStackOptions
 )
 
-__version__ = "0.7.11"
+__version__ = "0.8.0"
 
 __all__ = [
     'PrometheusStackBuilder',
